@@ -17,16 +17,9 @@ public class RequestInterceptor implements HandlerInterceptor {
         this.redisTemplate = redisTemplate;
     }
 
-    private String ipGenRequestCountKey(String ip) {
-        return new StringBuilder().append(ip).append("_request_count").toString();
-    }
-
-    private String ipGenBlockCountKey(String ip) {
-        return new StringBuilder().append(ip).append("_block_count").toString();
-    }
-
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+                             Object handler) throws Exception {
         String ip = request.getHeader("ip");
         System.out.println("拦截判断:" + ip);
         //先看黑名单里有没有这个ip，有的话就直接打回去
@@ -38,8 +31,8 @@ public class RequestInterceptor implements HandlerInterceptor {
             return false;
         }
         //频度检测，同一个ip在一个时间片（5s）内只允许请求最多10次，无论什么接口
-        String requestCountKey = ipGenRequestCountKey(ip);
-        if (!(redisTemplate.hasKey(requestCountKey))) {
+        String requestCountKey = ip + "_request_count";
+        if (!redisTemplate.hasKey(requestCountKey)) {
             redisTemplate.opsForValue().set(requestCountKey, 1, 5, TimeUnit.SECONDS);
         } else {
             redisTemplate.opsForValue().increment(requestCountKey);
@@ -48,7 +41,7 @@ public class RequestInterceptor implements HandlerInterceptor {
         //此外，如果用户在10分钟内已经是第五次高频请求了，将直接锁定ip
         if ((Integer) redisTemplate.opsForValue().get(requestCountKey) > 10) {
             //记录是第几次高频请求
-            String blockCountKey = ipGenBlockCountKey(ip);
+            String blockCountKey = ip + "_block_count";
             if (!(redisTemplate.hasKey(blockCountKey))) {
                 redisTemplate.opsForValue().set(blockCountKey, 1, 10, TimeUnit.MINUTES);
             } else {
