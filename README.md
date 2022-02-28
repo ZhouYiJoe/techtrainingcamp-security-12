@@ -506,4 +506,4 @@ class TechtrainingcampSecurity12ApplicationTests {
 
 项目采用git进行代码分支管理，开发累计15天，累计提交75次。
 
-![](README.assets\bcdde6f9-7a8d-40d6-8e68-5e133bbbdfc3.png)
+![](README.assets/bcdde6f9-7a8d-40d6-8e68-5e133bbbdfc3.png)
