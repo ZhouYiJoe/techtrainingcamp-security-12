@@ -1,23 +1,23 @@
-package com.catchyou.pojo;
+package com.catchyou.pojo.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
-import java.util.Date;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-public class User {
-    private String id;
+public class LoginWithUsernameReq {
+    @NotNull
     private String username;
-    private String phoneNumber;
+    @NotNull
     private String password;
-    private Date registerTime;
-    private String registerIp;
-    private String registerDeviceId;
-    private Integer isActive;
+    @Valid
+    @NotNull
+    private Environment environment;
 }

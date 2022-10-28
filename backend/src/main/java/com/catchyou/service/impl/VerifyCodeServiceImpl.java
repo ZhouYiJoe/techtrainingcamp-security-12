@@ -1,7 +1,9 @@
 package com.catchyou.service.impl;
 
 import com.catchyou.service.VerifyCodeService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -17,11 +19,8 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     private static final Duration EXPIRE_TIME = Duration.ofMinutes(3);
     private static final Duration LIMIT_TIME = Duration.ofMinutes(1);
 
-    private final RedisTemplate<String, Object> redisTemplate;
-
-    public VerifyCodeServiceImpl(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     /**
      * 生成随机的验证码
@@ -38,7 +37,7 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
         redisTemplate.opsForValue().set(key, verifyCode, EXPIRE_TIME);
         //记录请求了验证码的手机号，防止1分钟内进行多次验证码请求
         key = "verify_code_limit_" + phoneNumber;
-        redisTemplate.opsForValue().set(key, 1, LIMIT_TIME);
+        redisTemplate.opsForValue().set(key, "1", LIMIT_TIME);
         //记录该手机号请求验证码的累计次数
         key = "verify_code_request_count_" + phoneNumber;
         redisTemplate.opsForValue().increment(key);
@@ -55,7 +54,7 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     public boolean checkVerifyCode(String phoneNumber, String code) {
         //获取正确的验证码
         String key = "verify_code_" + phoneNumber;
-        String validVerifyCode = (String) redisTemplate.opsForValue().get(key);
+        String validVerifyCode = redisTemplate.opsForValue().get(key);
         //若验证码不存在或已过期，则验证失败
         if (validVerifyCode == null) {
             return false;
@@ -87,8 +86,8 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     @Override
     public boolean isFrequentRequest(String phoneNumber) {
         String key = "verify_code_request_count_" + phoneNumber;
-        Integer count = (Integer) redisTemplate.opsForValue().get(key);
-        return count != null && count == 3;
+        String count = redisTemplate.opsForValue().get(key);
+        return count != null && count.equals("3");
     }
 
     /**
@@ -98,6 +97,6 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     @Override
     public void recountRequest(String phoneNumber) {
         String key = "verify_code_request_count_" + phoneNumber;
-        redisTemplate.opsForValue().set(key, 0);
+        redisTemplate.opsForValue().set(key, "0");
     }
 }

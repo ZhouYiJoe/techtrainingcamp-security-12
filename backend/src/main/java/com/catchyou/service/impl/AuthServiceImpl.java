@@ -1,44 +1,50 @@
 package com.catchyou.service.impl;
 
-import com.catchyou.dao.AuthDao;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.catchyou.dao.LogMapper;
+import com.catchyou.dao.UserMapper;
 import com.catchyou.pojo.Log;
 import com.catchyou.pojo.User;
 import com.catchyou.service.AuthService;
 import com.catchyou.util.MyUtil;
 import org.mindrot.jbcrypt.BCrypt;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    @Resource
-    private AuthDao authDao;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
-    @Resource
-    private RedisTemplate redisTemplate;
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private LogMapper logMapper;
 
     @Override
     //判断用户名是否已经存在
     public Boolean checkUsernameExist(String username) {
-        User user = authDao.getUserByName(username);
-        if (user != null) {
-            return true;
-        }
-        return false;
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getUsername, username);
+        User user = userMapper.selectOne(cond);
+        return user != null;
     }
 
     @Override
     public Boolean checkPhoneExist(String phone) {
-        User user = authDao.getUserByPhone(phone);
-        if (user != null) {
-            return true;
-        }
-        return false;
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getPhoneNumber, phone);
+        User user = userMapper.selectOne(cond);
+        return user != null;
     }
 
     @Override
@@ -50,18 +56,18 @@ public class AuthServiceImpl implements AuthService {
         user.setId(uuid);
         //插入到数据库中
         System.out.println(user);
-        Integer res = authDao.insertUser(user);
+        int res = userMapper.insert(user);
         if (res == 0) {
             //插入失败返回null
             return null;
         }
         //登录记录
         Log log = new Log(null, user.getId(), new Date(), user.getRegisterIp(), user.getRegisterDeviceId());
-        authDao.insertLog(log);
+        logMapper.insert(log);
         //风控信息
-        String key = new StringBuilder().append(user.getUsername()).append("_login_cities").toString();
+        String key = user.getUsername() + "_login_cities";
         redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(user.getRegisterIp()));
-        key = new StringBuilder().append(user.getUsername()).append("_login_devices").toString();
+        key = user.getUsername() + "_login_devices";
         redisTemplate.opsForSet().add(key, user.getRegisterDeviceId());
         //插入成功返回uuid
         return uuid;
@@ -75,20 +81,26 @@ public class AuthServiceImpl implements AuthService {
     //返回 4 表示匹配失败，用户5分钟内无法再尝试（针对于某个ip地址）
     //返回 5 表示匹配失败，禁止用户登录（针对于某个ip地址）
     public Integer checkUsernamePasswordMatch(String username, String password, String ip) {
-        User user = authDao.getUserByName(username);
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getUsername, username);
+        User user = userMapper.selectOne(cond);
         if (user == null) {
             return 1;
         }
         String key = null;
         if (!BCrypt.checkpw(password, user.getPassword())) {
-            key = new StringBuilder().append(username).append("_").append(ip)
-                    .append("_wrong_pwd_count").toString();
-            if (!redisTemplate.hasKey(key)) {
-                redisTemplate.opsForValue().set(key, 1);
+            key = username + "_" + ip +
+                    "_wrong_pwd_count";
+            Boolean redisData = redisTemplate.hasKey(key);
+            Assert.notNull(redisData, "Redis获取数据异常");
+            if (!redisData) {
+                redisTemplate.opsForValue().set(key, "1");
             } else {
                 redisTemplate.opsForValue().increment(key);
             }
-            Integer count = (Integer) redisTemplate.opsForValue().get(key);
+            String redisData2 = redisTemplate.opsForValue().get(key);
+            Assert.notNull(redisData2, "Redis获取数据异常");
+            int count = Integer.parseInt(redisData2);
             //如果错了5次，那么1分钟内不允许用户再尝试
             if (count == 5) {
                 return 3;
@@ -112,79 +124,93 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String loginWithUsernameAfterCheck(String username, String ip, String deviceId) {
-        User user = authDao.getUserByName(username);
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getUsername, username);
+        User user = userMapper.selectOne(cond);
         //登录记录
         Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
-        authDao.insertLog(log);
+        logMapper.insert(log);
         //风控信息
-        String key = new StringBuilder().append(username).append("_login_cities").toString();
+        String key = username + "_login_cities";
         redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(ip));
-        key = new StringBuilder().append(username).append("_login_devices").toString();
+        key = username + "_login_devices";
         redisTemplate.opsForSet().add(key, deviceId);
         return user.getId();
     }
 
     @Override
     public String loginWithPhoneAfterCheck(String phone, String ip, String deviceId) {
-        User user = authDao.getUserByPhone(phone);
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getPhoneNumber, phone);
+        User user = userMapper.selectOne(cond);
         //登录记录
         Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
-        authDao.insertLog(log);
+        logMapper.insert(log);
         //风控信息
-        String key = new StringBuilder().append(user.getUsername()).append("_login_cities").toString();
+        String key = user.getUsername() + "_login_cities";
         redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(ip));
-        key = new StringBuilder().append(user.getUsername()).append("_login_devices").toString();
+        key = user.getUsername() + "_login_devices";
         redisTemplate.opsForSet().add(key, deviceId);
         return user.getId();
     }
 
     @Override
     public Boolean logout(String uid) {
-        User user = authDao.getUserById(uid);
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getId, uid);
+        User user = userMapper.selectOne(cond);
         if (user == null) {
             return false;
         }
-        authDao.setActiveFalse(user);
+        LambdaUpdateWrapper<User> cond2 = new LambdaUpdateWrapper<>();
+        cond2.eq(User::getId, user.getId()).set(User::getIsActive, false);
+        userMapper.update(user, cond2);
         //一些风控信息的清除
-        String key = new StringBuilder().append(user.getUsername()).append("_login_cities").toString();
+        String key = user.getUsername() + "_login_cities";
         redisTemplate.delete(key);
-        key = new StringBuilder().append(user.getUsername()).append("_login_devices").toString();
+        key = user.getUsername() + "_login_devices";
         redisTemplate.delete(key);
         return true;
     }
 
     @Override
-    public Log[] getLoginRecordById(String uid) {
-        return authDao.getLoginRecordById(uid);
+    public List<Log> getLoginRecordById(String uid) {
+        LambdaQueryWrapper<Log> cond = new LambdaQueryWrapper<>();
+        cond.eq(Log::getId, uid);
+        return logMapper.selectList(cond);
     }
 
     @Override
     public User getUserById(String uid) {
-        return authDao.getUserById(uid);
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getId, uid);
+        return userMapper.selectOne(cond);
     }
 
     @Override
     //规定，一个设备最多只能注册五个账号
     public Boolean checkRubbishRegister(String deviceId) {
-        Integer count = authDao.getMacRegisterCount(deviceId);
-        if (count >= 5) {
-            return true;
-        }
-        return false;
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getRegisterDeviceId, deviceId);
+        Integer count = userMapper.selectCount(cond);
+        Assert.notNull(count, "MySQL获取数据异常");
+        return count >= 5;
     }
 
     @Override
     //如果使用密码登录，那么需要进行异地检测
     public Boolean checkRemoteLogin(String username, String ip, String deviceId) {
-        String key = new StringBuilder().append(username).append("_login_devices").toString();
+        String key = username + "_login_devices";
         //如果不是信任的设备才需要检测
-        if (!redisTemplate.opsForSet().isMember(key, deviceId)) {
+        Boolean redisData = redisTemplate.opsForSet().isMember(key, deviceId);
+        Assert.notNull(redisData, "Redis获取数据异常");
+        if (!redisData) {
             String city = MyUtil.getCityFromIp(ip);
-            key = new StringBuilder().append(username).append("_login_cities").toString();
+            key = username + "_login_cities";
             //如果不是信任的ip地址
-            if (!redisTemplate.opsForSet().isMember(key, city)) {
-                return true;
-            }
+            redisData = redisTemplate.opsForSet().isMember(key, city);
+            Assert.notNull(redisData, "Redis获取数据异常");
+            return !redisData;
         }
         return false;
     }

@@ -1,31 +1,32 @@
 package com.catchyou.controller;
 
-import com.catchyou.pojo.CommonResult;
+import com.catchyou.pojo.dto.ApplyCodeReq;
+import com.catchyou.pojo.vo.ApplyCodeRes;
+import com.catchyou.pojo.vo.AuthRes;
+import com.catchyou.pojo.vo.CommonResult;
 import com.catchyou.service.AuthService;
 import com.catchyou.service.VerifyCodeService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/verifyCode")
 public class VerifyCodeController {
-    private final VerifyCodeService verifyCodeServiceImpl;
-    private final AuthService authServiceImpl;
-
-    public VerifyCodeController(VerifyCodeService verifyCodeServiceImpl,
-                                AuthService authServiceImpl) {
-        this.verifyCodeServiceImpl = verifyCodeServiceImpl;
-        this.authServiceImpl = authServiceImpl;
-    }
+    @Autowired
+    private VerifyCodeService verifyCodeServiceImpl;
+    @Autowired
+    private AuthService authServiceImpl;
 
     /**
      * 获取验证码
-     * @param requestBody
+     * @param req
      * Type 指定该验证码是用来注册还是用来登录的 1表示登录 2表示注册
      * PhoneNumber    //手机号
      * Environment{
@@ -43,39 +44,36 @@ public class VerifyCodeController {
      * }
      */
     @PostMapping("/applyCode")
-    public CommonResult<Map<String, Object>> applyCode(@RequestBody Map<String, Object> requestBody) {
-        String phoneNumber = (String) requestBody.get("phoneNumber");
-        Integer type = (Integer) requestBody.get("type");
-
+    public CommonResult<ApplyCodeRes> applyCode(@Valid @RequestBody ApplyCodeReq req) {
         int code = 1;
         String message = "请求成功";
         String verifyCode = null;
         int expireTime = 180;
         int decisionType = 0;
-        if (type == 1 && !authServiceImpl.checkPhoneExist(phoneNumber)) {
+        if (req.getType().equals(1) && !authServiceImpl.checkPhoneExist(req.getPhoneNumber())) {
             message = "手机号不存在";
             return new CommonResult<>(code, message);
-        } else if (type == 2 && authServiceImpl.checkPhoneExist(phoneNumber)) {
+        } else if (req.getType().equals(2) && authServiceImpl.checkPhoneExist(req.getPhoneNumber())) {
             message = "手机号已被注册";
             return new CommonResult<>(code, message);
-        } else if (verifyCodeServiceImpl.withinOneMinute(phoneNumber)) {
+        } else if (verifyCodeServiceImpl.withinOneMinute(req.getPhoneNumber())) {
             message = "验证码请求过于频繁";
             decisionType = 2;
-        } else if (verifyCodeServiceImpl.isFrequentRequest(phoneNumber)) {
+        } else if (verifyCodeServiceImpl.isFrequentRequest(req.getPhoneNumber())) {
             message = "需要进行滑块验证";
             decisionType = 1;
-            verifyCodeServiceImpl.recountRequest(phoneNumber);
+            verifyCodeServiceImpl.recountRequest(req.getPhoneNumber());
         } else {
             code = 0;
-            verifyCode = verifyCodeServiceImpl.generateVerifyCode(phoneNumber);
+            verifyCode = verifyCodeServiceImpl.generateVerifyCode(req.getPhoneNumber());
         }
 
-        System.out.println("验证码为" + verifyCode);
+        System.out.println(req.getPhoneNumber() + "的验证码为" + verifyCode);
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("verifyCode", verifyCode);
-        data.put("expireTime", expireTime);
-        data.put("decisionType", decisionType);
-        return new CommonResult<>(code, message, data);
+        ApplyCodeRes res = new ApplyCodeRes()
+                .setVerifyCode(verifyCode)
+                .setDecisionType(decisionType)
+                .setExpireTime(expireTime);
+        return new CommonResult<>(code, message, res);
     }
 }

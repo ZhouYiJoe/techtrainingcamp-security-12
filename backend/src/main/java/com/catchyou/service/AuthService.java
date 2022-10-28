@@ -3,6 +3,8 @@ package com.catchyou.service;
 import com.catchyou.pojo.Log;
 import com.catchyou.pojo.User;
 
+import java.util.List;
+
 public interface AuthService {
 
     Boolean checkUsernameExist(String username);
@@ -19,7 +21,7 @@ public interface AuthService {
 
     Boolean logout(String uid);
 
-    Log[] getLoginRecordById(String uid);
+    List<Log> getLoginRecordById(String uid);
 
     User getUserById(String uid);
 
