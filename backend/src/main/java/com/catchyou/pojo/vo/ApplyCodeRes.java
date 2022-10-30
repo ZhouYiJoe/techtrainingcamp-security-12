@@ -11,6 +11,7 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @Accessors(chain = true)
 public class ApplyCodeRes {
+    @ApiModelProperty("验证码")
     private String verifyCode;
     @ApiModelProperty("验证码的有效时长，单位为秒")
     private Integer expireTime;

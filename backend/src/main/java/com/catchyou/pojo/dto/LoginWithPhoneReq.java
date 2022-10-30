@@ -1,5 +1,6 @@
 package com.catchyou.pojo.dto;
 
+import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,9 +16,7 @@ import javax.validation.constraints.NotNull;
 public class LoginWithPhoneReq {
     @NotNull
     private String phoneNumber;
+    @ApiModelProperty("验证码")
     @NotNull
     private String verifyCode;
-    @Valid
-    @NotNull
-    private Environment environment;
 }

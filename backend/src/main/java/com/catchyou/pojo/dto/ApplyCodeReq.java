@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
-import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 @Data
@@ -19,7 +18,4 @@ public class ApplyCodeReq {
     @ApiModelProperty("指定该验证码是用来注册还是用来登录的 1表示登录 2表示注册")
     @NotNull
     private Integer type;
-    @Valid
-    @NotNull
-    private Environment environment;
 }

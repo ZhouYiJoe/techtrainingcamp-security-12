@@ -27,6 +27,8 @@ public class MyUtil {
                 "https://apis.map.qq.com/ws/location/v1/ip" +
                         "?ip=" + ip +
                         "&key=7YMBZ-4UJ6W-5DCRO-OGTUK-ENXY2-JLBOY", HashMap.class);
+        Integer status = (Integer) response.get("status");
+        if (status.equals(375)) return "局域网内";
         HashMap<String, Object> result = (HashMap) (response.get("result"));
         HashMap<String, Object> adInfo = (HashMap) (result.get("ad_info"));
         String city = (String) adInfo.get("city");

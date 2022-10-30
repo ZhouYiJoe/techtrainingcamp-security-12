@@ -12,7 +12,7 @@ import java.util.Date;
 @AllArgsConstructor
 @Accessors(chain = true)
 public class Log {
-    private Integer id;
+    private Long id;
     private String uid;
     private Date time;
     private String ip;

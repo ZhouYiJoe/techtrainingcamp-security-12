@@ -2,7 +2,6 @@ package com.catchyou.controller;
 
 import com.catchyou.pojo.dto.ApplyCodeReq;
 import com.catchyou.pojo.vo.ApplyCodeRes;
-import com.catchyou.pojo.vo.AuthRes;
 import com.catchyou.pojo.vo.CommonResult;
 import com.catchyou.service.AuthService;
 import com.catchyou.service.VerifyCodeService;
@@ -13,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/verifyCode")

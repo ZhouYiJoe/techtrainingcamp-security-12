@@ -1,11 +1,17 @@
 package com.catchyou.service.impl;
 
+import cn.hutool.json.JSONUtil;
+import cn.hutool.jwt.JWTPayload;
+import cn.hutool.jwt.JWTUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.catchyou.constant.JwtConstants;
+import com.catchyou.constant.RedisConstants;
 import com.catchyou.dao.LogMapper;
 import com.catchyou.dao.UserMapper;
 import com.catchyou.pojo.Log;
 import com.catchyou.pojo.User;
+import com.catchyou.pojo.dto.LoginUser;
 import com.catchyou.service.AuthService;
 import com.catchyou.util.MyUtil;
 import org.mindrot.jbcrypt.BCrypt;
@@ -14,9 +20,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -30,11 +34,25 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private LogMapper logMapper;
 
+    private String generateToken(String userId) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("userId", userId);
+        payload.put(JWTPayload.EXPIRES_AT, new Date(System.currentTimeMillis() + JwtConstants.TIMEOUT));
+        return JWTUtil.createToken(payload, JwtConstants.JWT_KEY);
+    }
+
+    private void saveLoginState(String token, String userId, String username) {
+        String loginStateKey = String.format(RedisConstants.LOGIN_STATE_KEY, userId);
+        redisTemplate.opsForHash().put(loginStateKey, "token", token);
+        LoginUser loginUser = new LoginUser(userId, username);
+        redisTemplate.opsForHash().put(loginStateKey, "login_user", JSONUtil.toJsonStr(loginUser));
+    }
+
     @Override
     //判断用户名是否已经存在
     public Boolean checkUsernameExist(String username) {
         LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getUsername, username);
+        cond.eq(User::getUsername, username).eq(User::getIsActive, 1);
         User user = userMapper.selectOne(cond);
         return user != null;
     }
@@ -42,7 +60,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public Boolean checkPhoneExist(String phone) {
         LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getPhoneNumber, phone);
+        cond.eq(User::getPhoneNumber, phone).eq(User::getIsActive, 1);
         User user = userMapper.selectOne(cond);
         return user != null;
     }
@@ -69,20 +87,84 @@ public class AuthServiceImpl implements AuthService {
         redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(user.getRegisterIp()));
         key = user.getUsername() + "_login_devices";
         redisTemplate.opsForSet().add(key, user.getRegisterDeviceId());
-        //插入成功返回uuid
-        return uuid;
+        String token = generateToken(uuid);
+        saveLoginState(token, uuid, user.getUsername());
+        //插入成功返回token
+        return token;
     }
 
     @Override
+    public String loginWithUsernameAfterCheck(String username, String ip, String deviceId) {
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getUsername, username);
+        User user = userMapper.selectOne(cond);
+        //登录记录
+        Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
+        logMapper.insert(log);
+        //风控信息
+        String key = username + "_login_cities";
+        redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(ip));
+        key = username + "_login_devices";
+        redisTemplate.opsForSet().add(key, deviceId);
+        String token = generateToken(user.getId());
+        saveLoginState(token, user.getId(), user.getUsername());
+        return token;
+    }
+
+    @Override
+    public String loginWithPhoneAfterCheck(String phone, String ip, String deviceId) {
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getPhoneNumber, phone);
+        User user = userMapper.selectOne(cond);
+        //登录记录
+        Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
+        logMapper.insert(log);
+        //风控信息
+        String key = user.getUsername() + "_login_cities";
+        redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(ip));
+        key = user.getUsername() + "_login_devices";
+        redisTemplate.opsForSet().add(key, deviceId);
+        String token = generateToken(user.getId());
+        saveLoginState(token, user.getId(), user.getUsername());
+        return token;
+    }
+
+    @Override
+    public Boolean logout(String uid) {
+        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
+        cond.eq(User::getId, uid).eq(User::getIsActive, 1);
+        User user = userMapper.selectOne(cond);
+        if (user == null) {
+            return false;
+        }
+        LambdaUpdateWrapper<User> cond2 = new LambdaUpdateWrapper<>();
+        cond2.eq(User::getId, user.getId()).set(User::getIsActive, 0);
+        userMapper.update(user, cond2);
+        //一些风控信息的清除
+        String key = user.getUsername() + "_login_cities";
+        redisTemplate.delete(key);
+        key = user.getUsername() + "_login_devices";
+        redisTemplate.delete(key);
+        return true;
+    }
+
+    @Override
+    public List<Log> getLoginRecordById(String uid) {
+        LambdaQueryWrapper<Log> cond = new LambdaQueryWrapper<>();
+        cond.eq(Log::getUid, uid);
+        return logMapper.selectList(cond);
+    }
+
     //返回 0 表示匹配成功
     //返回 1 表示用户名不存在，无惩罚机制
     //返回 2 表示匹配失败，无惩罚机制
     //返回 3 表示匹配失败，用户1分钟内无法再尝试（针对于某个ip地址）
     //返回 4 表示匹配失败，用户5分钟内无法再尝试（针对于某个ip地址）
     //返回 5 表示匹配失败，禁止用户登录（针对于某个ip地址）
+    @Override
     public Integer checkUsernamePasswordMatch(String username, String password, String ip) {
         LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getUsername, username);
+        cond.eq(User::getUsername, username).eq(User::getIsActive, 1);
         User user = userMapper.selectOne(cond);
         if (user == null) {
             return 1;
@@ -120,64 +202,6 @@ public class AuthServiceImpl implements AuthService {
             redisTemplate.delete(key);
         }
         return 0;
-    }
-
-    @Override
-    public String loginWithUsernameAfterCheck(String username, String ip, String deviceId) {
-        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getUsername, username);
-        User user = userMapper.selectOne(cond);
-        //登录记录
-        Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
-        logMapper.insert(log);
-        //风控信息
-        String key = username + "_login_cities";
-        redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(ip));
-        key = username + "_login_devices";
-        redisTemplate.opsForSet().add(key, deviceId);
-        return user.getId();
-    }
-
-    @Override
-    public String loginWithPhoneAfterCheck(String phone, String ip, String deviceId) {
-        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getPhoneNumber, phone);
-        User user = userMapper.selectOne(cond);
-        //登录记录
-        Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
-        logMapper.insert(log);
-        //风控信息
-        String key = user.getUsername() + "_login_cities";
-        redisTemplate.opsForSet().add(key, MyUtil.getCityFromIp(ip));
-        key = user.getUsername() + "_login_devices";
-        redisTemplate.opsForSet().add(key, deviceId);
-        return user.getId();
-    }
-
-    @Override
-    public Boolean logout(String uid) {
-        LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getId, uid);
-        User user = userMapper.selectOne(cond);
-        if (user == null) {
-            return false;
-        }
-        LambdaUpdateWrapper<User> cond2 = new LambdaUpdateWrapper<>();
-        cond2.eq(User::getId, user.getId()).set(User::getIsActive, false);
-        userMapper.update(user, cond2);
-        //一些风控信息的清除
-        String key = user.getUsername() + "_login_cities";
-        redisTemplate.delete(key);
-        key = user.getUsername() + "_login_devices";
-        redisTemplate.delete(key);
-        return true;
-    }
-
-    @Override
-    public List<Log> getLoginRecordById(String uid) {
-        LambdaQueryWrapper<Log> cond = new LambdaQueryWrapper<>();
-        cond.eq(Log::getId, uid);
-        return logMapper.selectList(cond);
     }
 
     @Override

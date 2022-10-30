@@ -17,7 +17,4 @@ public class LoginWithUsernameReq {
     private String username;
     @NotNull
     private String password;
-    @Valid
-    @NotNull
-    private Environment environment;
 }

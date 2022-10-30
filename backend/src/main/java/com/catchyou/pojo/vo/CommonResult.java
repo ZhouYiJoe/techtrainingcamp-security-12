@@ -1,5 +1,7 @@
 package com.catchyou.pojo.vo;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,7 +12,9 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
+@ApiModel("通用返回结果")
 public class CommonResult<T> {
+    @ApiModelProperty("0表示请求处理成功，1表示失败")
     private Integer code;
     private String message;
     //数据主体

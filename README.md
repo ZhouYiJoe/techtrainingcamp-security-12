@@ -200,6 +200,8 @@ mvn spring-boot:run
 
 - code = 1，decisionType=3 因为密码 15 次错误，永久封禁
 
+- code = 1,   decisionType=4 因为之前密码输入次数太多，被禁止登录
+
 示例：
 
 ```json

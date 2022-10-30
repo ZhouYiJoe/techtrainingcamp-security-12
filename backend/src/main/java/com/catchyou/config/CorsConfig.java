@@ -1,30 +1,60 @@
 package com.catchyou.config;
 
 import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * @Author zpc
- * @Date 2021/10/30
- * @Description 跨域
- */
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
 @SpringBootConfiguration
+@EnableWebMvc
 public class CorsConfig implements WebMvcConfigurer {
+    /**
+     * 跨域配置
+     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        //添加映射路径
+        //配置允许访问的URL
         registry.addMapping("/**")
-                //是否发送Cookie
-                .allowCredentials(true)
-                //设置放行哪些原始域   SpringBoot2.4.4下低版本使用.allowedOrigins("*")    
-                .allowedOrigins("*")
-                //放行哪些请求方式
-                .allowedMethods("GET", "POST", "PUT", "DELETE")
-                //.allowedMethods("*") //或者放行全部
-                //放行哪些原始请求头部信息
+                //允许携带的Header
                 .allowedHeaders("*")
-                //暴露哪些原始请求头部信息
-                .exposedHeaders("*");
+                //允许使用的请求方法
+                .allowedMethods("PUT", "POST", "GET", "HEAD", "DELETE", "OPTIONS")
+                //允许哪些IP访问本项目
+                .allowedOrigins("*")
+                //预检间隔时间
+                .maxAge(3600)
+                //是否发送cookie
+                .allowCredentials(true);
+    }
+
+    /**
+     * 进行全局跨域配置后可能会影响swagger页面等静态资源的访问，需要加入以下配置重新指定静态资源位置
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/");
+        registry.addResourceHandler("swagger-ui.html")
+                .addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/webjars/**").addResourceLocations(
+                "classpath:/META-INF/resources/webjars/");
+    }
+
+    /**
+     * 进行上面的静态资源配置后还会出现中文乱码问题，下面进行字符编码的配置
+     */
+    @Override
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        for (HttpMessageConverter<?> httpMessageConverter : converters) {
+            if (StringHttpMessageConverter.class.isAssignableFrom(httpMessageConverter.getClass())) {
+                ((StringHttpMessageConverter) httpMessageConverter).setDefaultCharset(StandardCharsets.UTF_8);
+            }
+        }
     }
 }
