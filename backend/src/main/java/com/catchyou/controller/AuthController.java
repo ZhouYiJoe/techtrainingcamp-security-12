@@ -288,4 +288,9 @@ public class AuthController {
         return 0;
     }
 
+    @ApiOperation("检查token的有效性")
+    @GetMapping("/checkToken")
+    public Boolean checkToken(@RequestHeader("token") String token) {
+        return true;
+    }
 }
