@@ -8,6 +8,7 @@ import com.catchyou.constant.RedisConstants;
 import com.catchyou.pojo.dto.LoginUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,12 @@ public class TokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(null, null, null));
+            filterChain.doFilter(request, response);
+            return;
+        }
         try {
             String token = request.getHeader("token");
             Assert.isTrue(StringUtils.hasText(token), "无效的token");
