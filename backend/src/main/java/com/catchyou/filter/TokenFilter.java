@@ -1,12 +1,9 @@
 package com.catchyou.filter;
 
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.hutool.jwt.JWT;
-import cn.hutool.jwt.JWTPayload;
 import cn.hutool.jwt.JWTUtil;
 import cn.hutool.jwt.JWTValidator;
-import com.catchyou.constant.JwtConstants;
 import com.catchyou.constant.RedisConstants;
 import com.catchyou.pojo.dto.LoginUser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +20,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Date;
 
 @Component
 public class TokenFilter extends OncePerRequestFilter {
