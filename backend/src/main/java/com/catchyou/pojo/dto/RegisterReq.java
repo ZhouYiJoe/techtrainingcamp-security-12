@@ -17,6 +17,7 @@ import javax.validation.constraints.NotNull;
 public class RegisterReq {
     @NotNull
     private String username;
+    @ApiModelProperty("经过公钥加密并进行了Base64编码的密码")
     @NotNull
     private String password;
     @NotNull
@@ -24,4 +25,7 @@ public class RegisterReq {
     @ApiModelProperty("验证码")
     @NotNull
     private String verifyCode;
+    @ApiModelProperty("经过Base64编码的公钥")
+    @NotNull
+    private String publicKeyBase64;
 }

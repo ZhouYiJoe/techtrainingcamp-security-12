@@ -33,6 +33,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/auth/loginWithUsername",
                         "/auth/loginWithPhone",
                         "/verifyCode/applyCode",
+                        "/auth/getPublicKey",
                         "/swagger-resources/**",
                         "/webjars/**",
                         "/v2/**",

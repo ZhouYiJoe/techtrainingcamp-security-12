@@ -24,4 +24,8 @@ public class CommonResult<T> {
         this.code = code;
         this.message = message;
     }
+
+    public static <T> CommonResult<T> ok(T data) {
+        return new CommonResult<>(0, "成功", data);
+    }
 }
