@@ -4,6 +4,7 @@ import cn.hutool.crypto.asymmetric.KeyType;
 import cn.hutool.crypto.asymmetric.RSA;
 import com.catchyou.constant.JwtConstants;
 import com.catchyou.constant.RedisConstants;
+import com.catchyou.constant.UserType;
 import com.catchyou.pojo.Log;
 import com.catchyou.pojo.User;
 import com.catchyou.pojo.dto.LoginWithPhoneReq;
@@ -81,7 +82,8 @@ public class AuthController {
                     .setRegisterTime(new Date())
                     .setRegisterIp(ip)
                     .setRegisterDeviceId(deviceId)
-                    .setIsActive(1);
+                    .setIsActive(1)
+                    .setType(UserType.NORMAL);
             //进行注册
             String token = authServiceImpl.registerAfterCheck(user);
             if (token == null) return new CommonResult<>(1, "未知错误，注册失败");

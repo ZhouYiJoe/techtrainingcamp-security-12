@@ -1,5 +1,6 @@
 package com.catchyou.pojo.dto;
 
+import com.catchyou.constant.UserType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,6 +18,7 @@ import java.util.Collection;
 public class LoginUser implements UserDetails {
     private String id;
     private String username;
+    private UserType userType;
 
     @JsonIgnore
     @Override

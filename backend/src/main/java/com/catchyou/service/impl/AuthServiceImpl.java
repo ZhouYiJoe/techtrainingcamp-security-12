@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.catchyou.constant.JwtConstants;
 import com.catchyou.constant.RedisConstants;
+import com.catchyou.constant.UserType;
 import com.catchyou.dao.LogMapper;
 import com.catchyou.dao.UserMapper;
 import com.catchyou.pojo.Log;
@@ -41,10 +42,10 @@ public class AuthServiceImpl implements AuthService {
         return JWTUtil.createToken(payload, JwtConstants.JWT_KEY);
     }
 
-    private void saveLoginState(String token, String userId, String username) {
+    private void saveLoginState(String token, String userId, String username, UserType userType) {
         String loginStateKey = String.format(RedisConstants.LOGIN_STATE_KEY, userId);
         redisTemplate.opsForHash().put(loginStateKey, "token", token);
-        LoginUser loginUser = new LoginUser(userId, username);
+        LoginUser loginUser = new LoginUser(userId, username, userType);
         redisTemplate.opsForHash().put(loginStateKey, "login_user", JSONUtil.toJsonStr(loginUser));
     }
 
@@ -88,7 +89,7 @@ public class AuthServiceImpl implements AuthService {
         key = user.getUsername() + "_login_devices";
         redisTemplate.opsForSet().add(key, user.getRegisterDeviceId());
         String token = generateToken(uuid);
-        saveLoginState(token, uuid, user.getUsername());
+        saveLoginState(token, uuid, user.getUsername(), user.getType());
         //插入成功返回token
         return token;
     }
@@ -107,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
         key = username + "_login_devices";
         redisTemplate.opsForSet().add(key, deviceId);
         String token = generateToken(user.getId());
-        saveLoginState(token, user.getId(), user.getUsername());
+        saveLoginState(token, user.getId(), user.getUsername(), user.getType());
         return token;
     }
 
@@ -125,7 +126,7 @@ public class AuthServiceImpl implements AuthService {
         key = user.getUsername() + "_login_devices";
         redisTemplate.opsForSet().add(key, deviceId);
         String token = generateToken(user.getId());
-        saveLoginState(token, user.getId(), user.getUsername());
+        saveLoginState(token, user.getId(), user.getUsername(), user.getType());
         return token;
     }
 

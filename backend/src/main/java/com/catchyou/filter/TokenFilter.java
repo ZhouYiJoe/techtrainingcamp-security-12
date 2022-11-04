@@ -50,6 +50,7 @@ public class TokenFilter extends OncePerRequestFilter {
             Assert.isTrue(token.equals(rightToken), "无效的token");
             String jsonStr = (String) redisTemplate.opsForHash().get(
                     String.format(RedisConstants.LOGIN_STATE_KEY, userId), "login_user");
+            Assert.notNull(jsonStr, "无效的token");
             LoginUser loginUser = JSONUtil.toBean(jsonStr, LoginUser.class);
             UsernamePasswordAuthenticationToken authenticationToken =
                     new UsernamePasswordAuthenticationToken(loginUser, null, null);

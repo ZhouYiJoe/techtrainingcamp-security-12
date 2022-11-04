@@ -1,5 +1,6 @@
 package com.catchyou.pojo;
 
+import com.catchyou.constant.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,4 +21,5 @@ public class User {
     private String registerIp;
     private String registerDeviceId;
     private Integer isActive;
+    private UserType type;
 }
