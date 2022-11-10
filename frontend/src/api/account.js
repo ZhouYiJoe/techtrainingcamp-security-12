@@ -1,5 +1,4 @@
 import request from '../utils/request';
-
 var url="http://127.0.0.1:9100"
 export default{
     register: data=>{
@@ -47,37 +46,61 @@ export default{
             data:data
         })
     },
-    getUser: data=>{
+    getUser: ()=>{
         return request({
             url: url+'/auth/getUser',
             headers:{
-                'ip':data.environment.ip,
-                'deviceId':data.environment.deviceId
+				// 'ip':data.environment.ip,
+				// 'deviceId':data.environment.deviceId,
+				'token':localStorage.getItem('sessionId'),
             },
             method:"post",
-            data:data
         })
     },
-    getLoginRecord: data=>{
+    getLoginRecord: ()=>{
         return request({
             url: url+'/auth/getLoginRecord',
             headers:{
-                'ip':data.environment.ip,
-                'deviceId':data.environment.deviceId
+                // 'ip':data.environment.ip,
+                // 'deviceId':data.environment.deviceId,
+				'token':localStorage.getItem('sessionId'),
             },
             method:"post",
-            data:data
+            // data:data,
         })
     },
     logout: data=>{
         return request({
             url: url+'/auth/logout',
             headers:{
-                'ip':data.environment.ip,
-                'deviceId':data.environment.deviceId
+                // 'ip':data.environment.ip,
+                // 'deviceId':data.environment.deviceId,
+				'token':localStorage.getItem('sessionId'),
             },
             method:"post",
             data:data
         })
     },
+	checkToken: ()=>{
+		return request({
+			url: url+'/auth/checkToken',
+			headers:{
+				// 'ip':'127.0.0.1',
+				// 'deviceId':data.environment.deviceId,
+				'token':localStorage.getItem('sessionId'),
+			},
+			method:"get",
+		})
+	},
+	getPublicKey: ()=>{
+		return request({
+			url: url+'/auth/getPublicKey',
+			headers:{
+				// 'ip':'127.0.0.1',
+				// 'deviceId':data.environment.deviceId,
+				// 'token':localStorage.getItem('sessionId'),
+			},
+			method:"get",
+		})
+	},
 }

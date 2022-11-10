@@ -123,7 +123,8 @@ import Fingerprint2 from 'fingerprintjs2';
 import Aips from '../../api/account';
 import JcRange from '../common/slider.vue';
 import Bus from '../common/bus';
-
+import {Base64} from 'js-base64'
+import JSEncrypt from 'jsencrypt'
 export default {
     data: function() {
         var validatePass2 = (rule, value, callback) => {
@@ -151,7 +152,13 @@ export default {
             loginState: true,
             accountParam: {},
             phoneParam: {},
-            registerParam: {},
+            // registerParam: {},
+			registerParam:{
+				username:"root",
+				password:123456,
+				passwordConfirm:123456,
+				phone:13535153340,
+			},
             accountRules: {
                 username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
                 password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
@@ -219,40 +226,50 @@ export default {
                 }
                 this.$refs.account_login.validate((valid) => {
                     if (valid) {
-                        var data = {
-                            username: this.accountParam.username,
-                            password: this.accountParam.password,
-                            environment: {
-                                ip: localStorage.getItem('ip'),
-                                deviceId: localStorage.getItem('deviceID')
-                            }
-                        };
-                        Aips.loginWithAccount(data).then((res) => {
-                            if (res.code == 0) {
-                                //成功
-                                this.$message.success(res.message);
-                                localStorage.setItem('sessionId', res.data.sessionId);
-                                console.log(res.data.sessionId);
-                                this.$message.success('登录成功');
-                                localStorage.setItem('userName', this.accountParam.username);
-                                //注释以达到快速请求
-                                this.accountParam = {};
-                                this.$router.push('/');
-                            } else if (res.code == 1) {
-                                this.$message.error(res.message);
-                                if (!(!res.data && typeof (res.data) != undefined && res.data != 0)) {
-                                    if (res.data.decisionType == 2) {
-                                        localStorage.setItem('LoginBanTime', res.data.banTime + new Date().getTime());
-                                    } else if (res.data.decisionType == 3) {
-                                        localStorage.setItem('BanAccount', data.username);
-                                    }
-                                }
-                            } else {
-                                this.$message.error(res.message)
-                                this.handleDecisionType(res.data)
-                            }
-                        });
-                        console.log(data);
+						Aips.getPublicKey().then(res=>{
+							var publicKey = res.data;
+							// rsa获取公钥后加密密码
+							var password = this.accountParam.password
+							var encryptor = new JSEncrypt()
+							encryptor.setPublicKey(publicKey)
+							password = encryptor.encrypt(password)
+							var data = {
+							    username: this.accountParam.username,
+							    password: password,
+							    environment: {
+							        ip: localStorage.getItem('ip'),
+							        deviceId: localStorage.getItem('deviceID')
+							    },
+								// 要带上
+								publicKeyBase64:publicKey,
+							};
+							// console.log('login--',data)
+							Aips.loginWithAccount(data).then((res) => {
+								console.log(res)
+							    if (res.code == 0) {
+							        //成功
+							        this.$message.success(res.message);
+							        localStorage.setItem('sessionId', res.data.sessionId);
+							        this.$message.success('登录成功');
+							        localStorage.setItem('userName', this.accountParam.username);
+							        //注释以达到快速请求
+							        this.accountParam = {};
+							        this.$router.push('/');
+							    } else if (res.code == 1) {
+							        this.$message.error(res.message);
+							        if (!(!res.data && typeof (res.data) != undefined && res.data != 0)) {
+							            if (res.data.decisionType == 2) {
+							                localStorage.setItem('LoginBanTime', res.data.banTime + new Date().getTime());
+							            } else if (res.data.decisionType == 3) {
+							                localStorage.setItem('BanAccount', data.username);
+							            }
+							        }
+							    } else {
+							        this.$message.error(res.message)
+							        this.handleDecisionType(res.data)
+							    }
+							});
+						})
                     } else {
                         this.$message.error('请输入账号和密码');
                         console.log('error submit!!');
@@ -275,6 +292,7 @@ export default {
                             }
                         };
                         Aips.loginWithPhone(data).then((res) => {
+							console.log(res)
                             if (res.code == 0) {
                                 //成功
                                 this.$message.success(res.message);
@@ -300,7 +318,7 @@ export default {
                 });
             }
         },
-        registerSubmit() {
+		registerSubmit() {
             if (!this.checkDecisionType()) {
                 return false;
             }
@@ -310,34 +328,42 @@ export default {
                     return 0;
                 }
                 if (valid) {
-                    var data = {
-                        username: this.registerParam.username,
-                        password: this.registerParam.password,
-                        phoneNumber: this.registerParam.phone,
-                        verifyCode: this.registerParam.verifyCode,
-                        environment: {
-                            ip: localStorage.getItem('ip'),
-                            deviceId: localStorage.getItem('deviceID')
-                        }
-                    };
-                    Aips.register(data).then((res) => {
-                        if (res.code == 0) {
-                            //成功
-                            this.$message.success(res.message);
-                            localStorage.setItem('sessionId', res.data.sessionId);
-                            console.log(res.data.sessionId);
-                            localStorage.setItem('userName', '...');
-                            this.registerParam = {};
-                            this.loginState = true;
-                            this.$router.push('/');
-                        } else if (res.code == 1) {
-                            this.$message.error(res.message);
-                        } else {
-                            this.$message.error(res.message)
-                            this.handleDecisionType(res.data)
-                        }
-                    });
-                    console.log(data);
+					Aips.getPublicKey().then(res=>{
+						var publicKey = res.data
+						var password = this.accountParam.password
+						var encryptor = new JSEncrypt()
+						encryptor.setPublicKey(publicKey)
+						password = encryptor.encrypt(password)
+						var data = {
+						    username: this.registerParam.username,
+						    password: password,
+						    phoneNumber: this.registerParam.phone,
+						    verifyCode: this.registerParam.verifyCode,
+						    environment: {
+						        ip: localStorage.getItem('ip'),
+						        deviceId: localStorage.getItem('deviceID')
+						    },
+							publicKeyBase64:publicKey,
+						};
+						// console.log('register--',data)
+						Aips.register(data).then((res) => {
+						    if (res.code == 0) {
+						        //成功
+						        this.$message.success(res.message);
+						        localStorage.setItem('sessionId', res.data.sessionId);
+						        localStorage.setItem('userName', '...');
+						        this.registerParam = {};
+						        this.loginState = true;
+						        this.$router.push('/');
+						    } else if (res.code == 1) {
+						        this.$message.error(res.message);
+						    } else {
+						        this.$message.error(res.message)
+						        this.handleDecisionType(res.data)
+						    }
+						});
+					})
+					
                 } else {
                     this.$message.error('请检查注册信息');
                     console.log('error submit!!');
@@ -377,6 +403,9 @@ export default {
                     this.$message.success(res.message);
                     this.verifyCode = res.data.verifyCode;
                     this.expireTime = new Date().getTime() + res.data.expireTime * 1000;
+					
+					// this.registerParam.verifyCode = res.data.verifyCode;
+					
                     console.log(res.data);
                 } else if (res.code == 1) {
                     this.$message.error(res.message);
@@ -392,7 +421,7 @@ export default {
                 }
             });
             //按钮字改变，禁用
-            this.codeTime = 60;
+            this.codeTime = 5;
             this.codeDisabled = true;
             this.codeText = '(' + this.codeTime + ')';
             this.time = setInterval(this.timer, 1000);
@@ -450,7 +479,7 @@ export default {
             } else if (data.decisionType == 3) {
                 localStorage.setItem('decisionType', 3);
             }
-        }
+        },
     }
 };
 </script>

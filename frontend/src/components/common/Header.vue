@@ -27,6 +27,8 @@
                     <el-dropdown-menu slot="dropdown">
                         <el-dropdown-item divided command="2">注销账号</el-dropdown-item>
                         <el-dropdown-item divided command="1">退出登录</el-dropdown-item>
+<!-- 						<el-dropdown-item divided command="3">getUser</el-dropdown-item>
+						<el-dropdown-item divided command="4">getLoginRecord</el-dropdown-item> -->
                     </el-dropdown-menu>
                 </el-dropdown>
             </div>
@@ -52,15 +54,25 @@ export default {
         this.getUser()
     },
     methods: {
+		checkToken(){
+			Aips.checkToken().then(res=>{
+				// token失效
+				if(res == false){
+					localStorage.clear();
+					this.$router.push('/login');
+				}
+			})
+		},
         getUser(){
-            let data={
-                sessionId:localStorage.getItem('sessionId'),
-                environment: {
-                    ip: localStorage.getItem('ip'),
-                    deviceId: localStorage.getItem('deviceID')
-                }
-            }
-            Aips.getUser(data).then(res=>{
+            // let data={
+            //     sessionId:localStorage.getItem('sessionId'),
+            //     environment: {
+            //         ip: localStorage.getItem('ip'),
+            //         deviceId: localStorage.getItem('deviceID')
+            //     }
+            // }
+			this.checkToken()
+            Aips.getUser().then(res=>{
                 if(res.code==0){
                     localStorage.setItem('userName',res.data.username)
                     this.username=res.data.username
@@ -73,6 +85,7 @@ export default {
         // 用户名下拉菜单选择事件
         handleCommand(actionType) {
             //1 退出 2 注销
+			// console.log(actionType)
             let data={
                 sessionId:localStorage.getItem('sessionId'),
                 actionType:actionType,
@@ -81,15 +94,49 @@ export default {
                     deviceId: localStorage.getItem('deviceID')
                 }
             }
-            Aips.logout(data).then(res=>{
-                if(res.code==0){
-                    this.$message.success(res.message)
-                    localStorage.clear()
-                    this.$router.push('/login');
-                }else{
-                    this.$message.error('请求失败');
-                }
-            })
+			if(actionType == 1){
+				Aips.logout(data).then(res=>{
+					// console.log(res)
+					if(res.code==0){
+						this.$message.success(res.message)
+						localStorage.clear()
+						this.$router.push('/login');
+					}else{
+						this.$message.error('请求失败');
+					}
+				})
+			}
+			if(actionType == 2){
+				// 测试checkToken
+				Aips.checkToken().then(res=>{
+					console.log(res)
+				    if(res.code==0){
+						
+				    }else{
+				        this.$message.error('请求失败');
+				    }
+				})
+			}
+			// if(actionType == 3){
+			// 	Aips.getUser().then(res=>{
+			// 		console.log(res)
+			// 	    if(res.code==0){
+
+			// 	    }else{
+			// 	        this.$message.error('请求失败');
+			// 	    }
+			// 	})
+			// }
+			// if(actionType == 4){
+			// 	Aips.getLoginRecord().then(res=>{
+			// 		console.log(res)
+			// 	    if(res.code==0){
+
+			// 	    }else{
+			// 	        this.$message.error('请求失败');
+			// 	    }
+			// 	})
+			// }
         },
         // 侧边栏折叠
         collapseChage() {

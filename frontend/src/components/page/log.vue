@@ -54,15 +54,25 @@ export default {
     watch: {},
     computed: {},
     methods: {
+		checkToken(){
+			Aips.checkToken().then(res=>{
+				// token失效
+				if(res == false){
+					localStorage.clear();
+					this.$router.push('/login');
+				}
+			})
+		},
         getData() {
-            let data={
-                sessionId:localStorage.getItem('sessionId'),
-                environment: {
-                    ip: localStorage.getItem('ip'),
-                    deviceId: localStorage.getItem('deviceID')
-                }
-            }
-            Aips.getLoginRecord(data).then(res=>{
+            // let data={
+            //     sessionId:localStorage.getItem('sessionId'),
+            //     environment: {
+            //         ip: localStorage.getItem('ip'),
+            //         deviceId: localStorage.getItem('deviceID')
+            //     }
+            // }
+			this.checkToken()
+            Aips.getLoginRecord().then(res=>{
                 if(res.code==0){
                     this.tableData=res.data
                 }else{
@@ -87,6 +97,7 @@ export default {
         },
         // 删除操作
         handleDelete(index, row) {
+			this.checkToken()
             // 二次确认删除
             this.$confirm('确定要删除吗？', '提示', {
                 type: 'warning'
