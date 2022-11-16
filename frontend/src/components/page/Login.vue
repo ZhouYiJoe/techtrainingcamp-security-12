@@ -330,7 +330,7 @@ export default {
                 if (valid) {
 					Aips.getPublicKey().then(res=>{
 						var publicKey = res.data
-						var password = this.accountParam.password
+						var password = this.registerParam.password
 						var encryptor = new JSEncrypt()
 						encryptor.setPublicKey(publicKey)
 						password = encryptor.encrypt(password)
