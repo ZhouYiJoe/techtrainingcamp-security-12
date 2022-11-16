@@ -94,29 +94,16 @@ export default {
                     deviceId: localStorage.getItem('deviceID')
                 }
             }
-			if(actionType == 1){
-				Aips.logout(data).then(res=>{
-					// console.log(res)
-					if(res.code==0){
-						this.$message.success(res.message)
-						localStorage.clear()
-						this.$router.push('/login');
-					}else{
-						this.$message.error('请求失败');
-					}
-				})
-			}
-			if(actionType == 2){
-				// 测试checkToken
-				Aips.checkToken().then(res=>{
-					console.log(res)
-				    if(res.code==0){
-						
-				    }else{
-				        this.$message.error('请求失败');
-				    }
-				})
-			}
+            Aips.logout(data).then(res=>{
+                // console.log(res)
+                if(res.code==0){
+                    this.$message.success(res.message)
+                    localStorage.clear()
+                    this.$router.push('/login');
+                }else{
+                    this.$message.error('请求失败');
+                }
+            })
 			// if(actionType == 3){
 			// 	Aips.getUser().then(res=>{
 			// 		console.log(res)

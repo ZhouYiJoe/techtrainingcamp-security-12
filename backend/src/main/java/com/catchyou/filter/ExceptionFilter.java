@@ -20,16 +20,13 @@ public class ExceptionFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } catch (Exception e) {
-            //因为这个catch块是会捕获到controller以及controller直接或间接调用的类抛出来的异常的
-            //而这类异常都会变成NestedServletException形式的嵌套异常，所以需要先获取最内层的异常
-            //如果不是NestedServletException的话，那么就是过滤器本身抛出的异常
             Throwable rootCause = e instanceof NestedServletException ? ((NestedServletException) e).getRootCause() : e;
             rootCause.printStackTrace();
             request.setAttribute("javax.servlet.error.status_code", HttpStatus.INTERNAL_SERVER_ERROR.value());
             request.setAttribute("javax.servlet.error.message", rootCause.getMessage());
             request.setAttribute("javax.servlet.error.request_uri", request.getServletPath());
             request.setAttribute("javax.servlet.error.exception", rootCause);
-            //进行转发，BasicErrorController默认对应的URL为/error
+            // 把请求转发给BasicErrorController
             request.getRequestDispatcher("/error").forward(request, response);
         }
     }

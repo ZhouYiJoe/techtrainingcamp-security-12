@@ -26,7 +26,7 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String ip = (String) request.getAttribute("ip");
-        //先看黑名单里有没有这个ip，有的话就直接打回去
+        // 先看黑名单里有没有这个ip，有的话就直接打回去
         Boolean redisData = redisTemplate.opsForSet().isMember("ip_black_list", ip);
         Assert.notNull(redisData, "Redis数据获取异常");
         if (redisData) {
@@ -35,7 +35,7 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
             MyUtil.setResponse(response, new CommonResult<>(-1, "由于多次的高频访问，您的ip已被锁定", map));
             return;
         }
-        //频度检测，同一个ip在一个时间片（5s）内只允许请求最多100次，无论什么接口
+        // 记录同一个IP在一个时间片（5s）内进行了多少次请求
         String requestCountKey = ip + "_request_count";
         redisData = redisTemplate.hasKey(requestCountKey);
         Assert.notNull(redisData, "Redis数据获取异常");
@@ -44,12 +44,11 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
         } else {
             redisTemplate.opsForValue().increment(requestCountKey);
         }
-        //如果用户请求接口频率过高，将要求滑块验证
-        //此外，如果用户在10分钟内已经是第五次高频请求了，将直接锁定ip
+        // 如果同一个IP在一个时间片（5s）内进行了超过100次请求，则判断为一次高频访问
         String redisData2 = redisTemplate.opsForValue().get(requestCountKey);
         Assert.notNull(redisData2, "Redis数据获取异常");
         if (Integer.parseInt(redisData2) > 100) {
-            //记录是第几次高频请求
+            // 记录当前IP在十分钟内进行了几次高频访问
             String blockCountKey = ip + "_block_count";
             redisData = redisTemplate.hasKey(blockCountKey);
             Assert.notNull(redisData, "Redis数据获取异常");
@@ -58,7 +57,7 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
             } else {
                 redisTemplate.opsForValue().increment(blockCountKey);
             }
-            //ip加入黑名单
+            // 如果IP在十分钟内进行了超过5次高频访问，则把IP放入黑名单
             redisData2 = redisTemplate.opsForValue().get(blockCountKey);
             Assert.notNull(redisData2, "Redis数据获取异常");
             if (Integer.parseInt(redisData2) >= 5) {
@@ -69,6 +68,7 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
                 redisTemplate.delete(blockCountKey);
                 return;
             }
+            // 若IP没有被放入黑名单，则本次高频访问后需要进行滑块验证
             HashMap<String, Object> map = new HashMap<>();
             map.put("decisionType", 1);
             MyUtil.setResponse(response, new CommonResult<>(-1, "ip访问过于频繁，需要进行滑块验证", map));

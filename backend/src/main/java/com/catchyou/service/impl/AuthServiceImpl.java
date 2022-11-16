@@ -35,13 +35,29 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private LogMapper logMapper;
 
+    /**
+     * 生成JWT Token
+     * @param userId 用户ID
+     * @return 生成的JWT Token
+     */
     private String generateToken(String userId) {
         Map<String, Object> payload = new HashMap<>();
+        // 在JWT Token中存储用户的ID
         payload.put("userId", userId);
+        // 设置JWT Token的过期时间
         payload.put(JWTPayload.EXPIRES_AT, new Date(System.currentTimeMillis() + JwtConstants.TIMEOUT));
         return JWTUtil.createToken(payload, JwtConstants.JWT_KEY);
     }
 
+    /**
+     * 保存用户的登录状态到Redis中，
+     * 登录状态里保存的信息包括token、用户ID、用户名、用户类型，
+     * 在Redis中，以用户ID为键保存登录状态
+     * @param token JWT Token
+     * @param userId 用户ID
+     * @param username 用户名
+     * @param userType 用户类型
+     */
     private void saveLoginState(String token, String userId, String username, UserType userType) {
         String loginStateKey = String.format(RedisConstants.LOGIN_STATE_KEY, userId);
         redisTemplate.opsForHash().put(loginStateKey, "token", token);
@@ -97,7 +113,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String loginWithUsernameAfterCheck(String username, String ip, String deviceId) {
         LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getUsername, username);
+        cond.eq(User::getUsername, username).eq(User::getIsActive, true);
         User user = userMapper.selectOne(cond);
         //登录记录
         Log log = new Log(null, user.getId(), new Date(), ip, deviceId);
@@ -115,7 +131,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String loginWithPhoneAfterCheck(String phone, String ip, String deviceId) {
         LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
-        cond.eq(User::getPhoneNumber, phone);
+        cond.eq(User::getPhoneNumber, phone).eq(User::getIsActive, true);
         User user = userMapper.selectOne(cond);
         //登录记录
         Log log = new Log(null, user.getId(), new Date(), ip, deviceId);

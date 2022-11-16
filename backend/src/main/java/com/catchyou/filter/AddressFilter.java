@@ -17,9 +17,13 @@ public class AddressFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
+            // 获取请求的源IP地址
             String ip = IpUtil.getIpAddr(request);
+            // 把IP地址放入请求的属性中
             request.setAttribute("ip", ip);
+            // 获取请求的源MAC地址
             String deviceId = IpUtil.getMACAddress(ip);
+            // 把MAC地址放入请求的属性中
             if (deviceId == null) deviceId = "局域网内设备";
             request.setAttribute("device_id", deviceId);
         } catch (Exception e) {

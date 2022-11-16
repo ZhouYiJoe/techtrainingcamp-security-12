@@ -42,10 +42,18 @@ public class AuthController {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    /**
+     * 对密码密文进行解密
+     * @param publicKeyBase64 公钥
+     * @param encodedPassword 密码密文
+     * @return 密码明文
+     */
     private String getDecryptedPassword(String publicKeyBase64, String encodedPassword) {
+        // 从Redis中获取公钥对应的私钥
         String redisKey = String.format(RedisConstants.PRIVATE_KEY_KEY, publicKeyBase64);
         String privateKeyBase64 = redisTemplate.opsForValue().get(redisKey);
         Assert.notNull(privateKeyBase64, "公钥不正确或公钥对应的私钥已失效");
+        // 使用私钥对密码密文进行解密，返回密码明文
         RSA rsa = new RSA(privateKeyBase64, null);
         return rsa.decryptStr(encodedPassword, KeyType.PrivateKey);
     }
@@ -249,10 +257,13 @@ public class AuthController {
     @GetMapping("/getPublicKey")
     public CommonResult<String> getPublicKey() {
         RSA rsa = new RSA();
+        // 生成公钥和私钥
         String privateKeyBase64 = rsa.getPrivateKeyBase64();
         String publicKeyBase64 = rsa.getPublicKeyBase64();
+        // 把私钥存储到Redis中
         String redisKey = String.format(RedisConstants.PRIVATE_KEY_KEY, publicKeyBase64);
         redisTemplate.opsForValue().set(redisKey, privateKeyBase64, 3, TimeUnit.MINUTES);
+        // 把公钥返回给客户端
         return CommonResult.ok(publicKeyBase64);
     }
 }
