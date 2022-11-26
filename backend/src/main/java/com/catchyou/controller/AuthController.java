@@ -2,6 +2,8 @@ package com.catchyou.controller;
 
 import cn.hutool.crypto.asymmetric.KeyType;
 import cn.hutool.crypto.asymmetric.RSA;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONUtil;
 import com.catchyou.constant.JwtConstants;
 import com.catchyou.constant.RedisConstants;
 import com.catchyou.constant.UserType;
@@ -27,7 +29,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @RestController
@@ -44,6 +48,7 @@ public class AuthController {
 
     /**
      * 对密码密文进行解密
+     *
      * @param publicKeyBase64 公钥
      * @param encodedPassword 密码密文
      * @return 密码明文
@@ -190,10 +195,12 @@ public class AuthController {
         String currentUserId = SpringSecurityUtil.getCurrentUserId();
         try {
             if (req.getActionType().equals(1)) {
+                // 如果actionType为1，则退出登录
                 String key = String.format(RedisConstants.LOGIN_STATE_KEY, currentUserId);
                 redisTemplate.delete(key);
                 return new CommonResult<>(0, "登出成功");
             } else if (req.getActionType().equals(2)) {
+                // 如果actionType为2，则注销账号
                 Boolean res = authServiceImpl.logout(currentUserId);
                 if (!res) return new CommonResult<>(1, "注销失败");
                 return new CommonResult<>(0, "注销成功");
@@ -265,5 +272,32 @@ public class AuthController {
         redisTemplate.opsForValue().set(redisKey, privateKeyBase64, 3, TimeUnit.MINUTES);
         // 把公钥返回给客户端
         return CommonResult.ok(publicKeyBase64);
+    }
+
+    @ApiOperation("检测用户滑动滑块时的鼠标轨迹，如果通过则返回True")
+    @PostMapping("/checkMouseTrack")
+    public CommonResult<Boolean> checkMouseTrack(
+            @RequestBody List<List<Double>> mouseTrack,
+            @ApiParam(hidden = true) @RequestAttribute("ip") String ip) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("mouseTrack", mouseTrack);
+        body.put("ip", ip);
+        String response = HttpUtil.post("http://127.0.0.1:5000/check_mouse_track", JSONUtil.toJsonStr(body));
+        Assert.notNull(response, "滑块验证功能不可用");
+        boolean res = response.startsWith("true");
+        String key = String.format(RedisConstants.CAPTCHA_FAIL_COUNT_KEY, ip);
+        if (res) {
+            redisTemplate.delete(key);
+            redisTemplate.opsForSet().remove(RedisConstants.CAPTCHA_BLOCK_LIST_KEY, ip);
+        } else {
+            Long count = redisTemplate.opsForValue().increment(key);
+            Assert.notNull(count, "Redis异常");
+            if (count >= 10) {
+                redisTemplate.opsForSet().add(RedisConstants.IP_BLACK_LIST_KEY, ip);
+                redisTemplate.opsForSet().remove(RedisConstants.CAPTCHA_BLOCK_LIST_KEY, ip);
+                redisTemplate.delete(key);
+            }
+        }
+        return CommonResult.ok(res);
     }
 }

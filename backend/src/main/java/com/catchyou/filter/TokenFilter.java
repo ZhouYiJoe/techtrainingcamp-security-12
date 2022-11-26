@@ -31,6 +31,7 @@ public class TokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // 前端自动发送的OPTIONS请求不需要验证token
         if (HttpMethod.OPTIONS.matches(request.getMethod())) {
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(null, null, null));
@@ -38,19 +39,23 @@ public class TokenFilter extends OncePerRequestFilter {
             return;
         }
         try {
+            // 从请求的头部中获取token，并验证token的有效性
             String token = request.getHeader("token");
             Assert.isTrue(StringUtils.hasText(token), "无效的token");
             JWT jwt = JWTUtil.parseToken(token);
             JWTValidator jwtValidator = JWTValidator.of(jwt);
+            // 验证token是否过期
             jwtValidator.validateDate();
             String userId = (String) jwt.getPayload("userId");
             Assert.notNull(userId, "无效的token");
+            // 验证该token与Redis中存储的token是否相同
             String rightToken = (String) redisTemplate.opsForHash().get(
                     String.format(RedisConstants.LOGIN_STATE_KEY, userId), "token");
             Assert.isTrue(token.equals(rightToken), "无效的token");
             String jsonStr = (String) redisTemplate.opsForHash().get(
                     String.format(RedisConstants.LOGIN_STATE_KEY, userId), "login_user");
             Assert.notNull(jsonStr, "无效的token");
+            // 把用户的登录状态保存到SecurityContext中
             LoginUser loginUser = JSONUtil.toBean(jsonStr, LoginUser.class);
             UsernamePasswordAuthenticationToken authenticationToken =
                     new UsernamePasswordAuthenticationToken(loginUser, null, null);

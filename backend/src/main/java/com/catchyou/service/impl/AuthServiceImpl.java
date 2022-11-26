@@ -180,6 +180,7 @@ public class AuthServiceImpl implements AuthService {
     //返回 5 表示匹配失败，禁止用户登录（针对于某个ip地址）
     @Override
     public Integer checkUsernamePasswordMatch(String username, String password, String ip) {
+        // 从数据库中查询正确的密码
         LambdaQueryWrapper<User> cond = new LambdaQueryWrapper<>();
         cond.eq(User::getUsername, username).eq(User::getIsActive, 1);
         User user = userMapper.selectOne(cond);
@@ -188,6 +189,7 @@ public class AuthServiceImpl implements AuthService {
         }
         String key = null;
         if (!BCrypt.checkpw(password, user.getPassword())) {
+            // 如果密码错误，则记录该IP输入密码错误的累计次数
             key = username + "_" + ip +
                     "_wrong_pwd_count";
             Boolean redisData = redisTemplate.hasKey(key);
@@ -200,21 +202,21 @@ public class AuthServiceImpl implements AuthService {
             String redisData2 = redisTemplate.opsForValue().get(key);
             Assert.notNull(redisData2, "Redis获取数据异常");
             int count = Integer.parseInt(redisData2);
-            //如果错了5次，那么1分钟内不允许用户再尝试
+            // 如果错了5次，那么1分钟内不允许用户再尝试
             if (count == 5) {
                 return 3;
             }
-            //如果错了10次，那么5分钟内不允许用户再尝试
+            // 如果错了10次，那么5分钟内不允许用户再尝试
             if (count == 10) {
                 return 4;
             }
-            //如果错了15次，那么封号处理（针对这个ip的封号）
+            // 如果错了15次，那么封号处理（针对这个ip的封号）
             if (count == 15) {
                 return 5;
             }
             return 2;
         }
-        //一旦登录成功，那么需要把风控信息清除
+        // 一旦登录成功，那么需要把风控信息清除
         if (key != null) {
             redisTemplate.delete(key);
         }

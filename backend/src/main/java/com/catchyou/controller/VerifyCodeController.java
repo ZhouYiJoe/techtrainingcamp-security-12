@@ -1,15 +1,15 @@
 package com.catchyou.controller;
 
+import com.catchyou.constant.RedisConstants;
 import com.catchyou.pojo.dto.ApplyCodeReq;
 import com.catchyou.pojo.vo.ApplyCodeRes;
 import com.catchyou.pojo.vo.CommonResult;
 import com.catchyou.service.AuthService;
 import com.catchyou.service.VerifyCodeService;
+import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
@@ -20,9 +20,12 @@ public class VerifyCodeController {
     private VerifyCodeService verifyCodeServiceImpl;
     @Autowired
     private AuthService authServiceImpl;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @PostMapping("/applyCode")
-    public CommonResult<ApplyCodeRes> applyCode(@Valid @RequestBody ApplyCodeReq req) {
+    public CommonResult<ApplyCodeRes> applyCode(@Valid @RequestBody ApplyCodeReq req,
+                                                @ApiParam(hidden = true) @RequestAttribute("ip") String ip) {
         int code = 1;
         String message = "请求成功";
         String verifyCode = null;
@@ -38,6 +41,7 @@ public class VerifyCodeController {
             message = "验证码请求过于频繁";
             decisionType = 2;
         } else if (verifyCodeServiceImpl.isFrequentRequest(req.getPhoneNumber())) {
+            redisTemplate.opsForSet().add(RedisConstants.CAPTCHA_BLOCK_LIST_KEY, ip);
             message = "需要进行滑块验证";
             decisionType = 1;
             verifyCodeServiceImpl.recountRequest(req.getPhoneNumber());

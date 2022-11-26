@@ -1,5 +1,6 @@
 package com.catchyou.filter;
 
+import com.catchyou.constant.RedisConstants;
 import com.catchyou.pojo.vo.CommonResult;
 import com.catchyou.util.MyUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +27,16 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String ip = (String) request.getAttribute("ip");
+        Boolean inCaptchaList = redisTemplate.opsForSet().isMember(RedisConstants.CAPTCHA_BLOCK_LIST_KEY, ip);
+        Assert.notNull(inCaptchaList, "Redis数据获取异常");
+        if (inCaptchaList) {
+            HashMap<String, Object> map = new HashMap<>();
+            map.put("decisionType", 1);
+            MyUtil.setResponse(response, new CommonResult<>(-1, "需要进行滑块验证", map));
+            return;
+        }
         // 先看黑名单里有没有这个ip，有的话就直接打回去
-        Boolean redisData = redisTemplate.opsForSet().isMember("ip_black_list", ip);
+        Boolean redisData = redisTemplate.opsForSet().isMember(RedisConstants.IP_BLACK_LIST_KEY, ip);
         Assert.notNull(redisData, "Redis数据获取异常");
         if (redisData) {
             HashMap<String, Object> map = new HashMap<>();
@@ -69,6 +78,7 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
                 return;
             }
             // 若IP没有被放入黑名单，则本次高频访问后需要进行滑块验证
+            redisTemplate.opsForSet().add(RedisConstants.CAPTCHA_BLOCK_LIST_KEY, ip);
             HashMap<String, Object> map = new HashMap<>();
             map.put("decisionType", 1);
             MyUtil.setResponse(response, new CommonResult<>(-1, "ip访问过于频繁，需要进行滑块验证", map));

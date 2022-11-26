@@ -15,6 +15,7 @@ public class MyUtil {
     private static RestTemplate restTemplate = new RestTemplate();
 
     public static void setResponse(HttpServletResponse response, Object payload) throws IOException {
+        response.setContentType("application/json; charset=utf-8");
         byte[] json = new ObjectMapper().writeValueAsBytes(payload);
         OutputStream out = response.getOutputStream();
         out.write(json);

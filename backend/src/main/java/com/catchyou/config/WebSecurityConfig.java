@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.CorsFilter;
 
 @SpringBootConfiguration
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
@@ -21,6 +22,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private RequestFrequencyFilter requestFrequencyFilter;
     @Autowired
     private TokenFilter tokenFilter;
+    @Autowired
+    private CorsFilter corsFilter;
 
     @Override
     protected void configure(HttpSecurity httpSecurity) throws Exception {
@@ -34,6 +37,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/auth/loginWithPhone",
                         "/verifyCode/applyCode",
                         "/auth/getPublicKey",
+                        "/auth/checkMouseTrack",
                         "/swagger-resources/**",
                         "/webjars/**",
                         "/v2/**",
@@ -43,6 +47,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         httpSecurity.addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(requestFrequencyFilter, TokenFilter.class)
                 .addFilterBefore(addressFilter, RequestFrequencyFilter.class)
-                .addFilterBefore(exceptionFilter, AddressFilter.class);
+                .addFilterBefore(exceptionFilter, AddressFilter.class)
+                .addFilterBefore(corsFilter, ExceptionFilter.class);
     }
 }
