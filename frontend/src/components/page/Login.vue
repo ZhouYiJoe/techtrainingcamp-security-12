@@ -1,5 +1,6 @@
 <template>
     <div class='login-wrap'>
+		<!-- <button @click="showSlider = true">显示滑块</button> -->
         <div class='ms-login'>
             <div class='ms-title'>抓到你啦！</div>
             <el-tabs type='border-card' v-model='activeName' :stretch='true' class='tabs' v-if='loginState'>
@@ -137,8 +138,8 @@ export default {
             }
         };
         return {
-            showSlider: false,
-            sliderStatus: false,
+			showSlider: false,
+			sliderStatus: false,
             verifyCode: '',
             expireTime: '',
             decisionType: '',
@@ -152,12 +153,11 @@ export default {
             loginState: true,
             accountParam: {},
             phoneParam: {},
-            // registerParam: {},
 			registerParam:{
 				username:"root",
 				password:123456,
 				passwordConfirm:123456,
-				phone:13535153340,
+				phone:13511113330,
 			},
             accountRules: {
                 username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -184,8 +184,7 @@ export default {
         Bus.$on('sliderChange', (data) => {
             this.sliderStatus = data;
         });
-    }
-    ,
+    },
     created() {
         console.log(localStorage.getItem('ip'));
         localStorage.setItem('ip', returnCitySN['cip']);
@@ -243,7 +242,6 @@ export default {
 								// 要带上
 								publicKeyBase64:publicKey,
 							};
-							// console.log('login--',data)
 							Aips.loginWithAccount(data).then((res) => {
 								console.log(res)
 							    if (res.code == 0) {
@@ -297,7 +295,6 @@ export default {
                                 //成功
                                 this.$message.success(res.message);
                                 localStorage.setItem('sessionId', res.data.sessionId);
-                                console.log(res.data.sessionId);
                                 // this.$message.success('登录成功');
                                 localStorage.setItem('userName', '...');
                                 this.accountParam = {};
@@ -345,7 +342,6 @@ export default {
 						    },
 							publicKeyBase64:publicKey,
 						};
-						// console.log('register--',data)
 						Aips.register(data).then((res) => {
 						    if (res.code == 0) {
 						        //成功
@@ -446,7 +442,6 @@ export default {
         },
         //检验验证码
         validateCode(value) {
-            ////////////////////后面要删除123456
             if (value === '') {
                 this.$message.error('请输入验证码');
                 return false;

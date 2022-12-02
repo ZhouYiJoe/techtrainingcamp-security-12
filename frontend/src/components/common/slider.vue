@@ -8,6 +8,7 @@
 </template>
 <script>
 import Bus from './bus'
+import Aips from '../../api/account';
 export default {
   props: {
     // 成功之后的函数
@@ -47,7 +48,6 @@ export default {
   data() {
     return {
         rangeStatus:'',
-        
     };
   },
   methods: {
@@ -57,8 +57,16 @@ export default {
 			let eleWidth = ele.offsetWidth;
 			let parentWidth =  ele.parentElement.offsetWidth;
 			let MaxX = parentWidth - eleWidth;
+			let mouseTrack = []
 			if(this.rangeStatus){//不运行
 				return false;
+			}
+			// 获取鼠标轨迹
+			document.onpointermove = function(event){
+				const timestamp = Date.parse(new Date());
+				let pointerEvents = event.getCoalescedEvents()
+				mouseTrack.push([pointerEvents[0].pageX,pointerEvents[0].pageY,timestamp])
+				// console.log(timestamp)
 			}
 			document.onmousemove = (e) => {
 				let endX = e.clientX;
@@ -73,27 +81,42 @@ export default {
 				ele.style.transform = 'translateX('+this.disX+'px)';
 				e.preventDefault();
 			}
-			document.onmouseup = ()=> {
+			document.onmouseup = () => {
 				if(this.disX !== MaxX){
+					// 滑块未完成
 					ele.style.transition = '.5s all';
 					ele.style.transform = 'translateX(0)';
-					//执行成功的函数
+					//执行失败的函数
 					this.errorFun && this.errorFun();
 				}else{
-					this.rangeStatus = true;
-					// if(this.status){
-					// 	this.$parent[this.status] = true;
-					// }
-                    Bus.$emit('sliderChange',true)
-
-					//执行成功的函数
-					this.successFun && this.successFun();
+					// 滑块完成后验证轨迹
+					// console.log("滑块完成",mouseTrack)
+					Aips.checkMouseTrack(mouseTrack).then(res=>{
+						console.log(res)
+						if(res.code == 0){
+							this.rangeStatus = true;
+							// if(this.status){
+							// 	this.$parent[this.status] = true;
+							// }
+							
+							//执行成功的函数
+							Bus.$emit('sliderChange',true)
+							this.successFun && this.successFun();
+						}
+					},err=>{
+						console.log(err)
+					}).catch(err=>{
+						console.log(err)
+					})
 				}
+				// 清空轨迹
+				mouseTrack = []
+				// 清除滑动指针事件
 				document.onmousemove = null;
 				document.onmouseup = null;
+				document.onpointermove = null;
 			}
 		}
-  
   }
 };
 </script>

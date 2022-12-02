@@ -103,4 +103,16 @@ export default{
 			method:"get",
 		})
 	},
+	checkMouseTrack:(data)=>{
+		return request({
+			url: url+'/auth/checkMouseTrack',
+			headers:{
+				// 'ip':'127.0.0.1',
+				// 'deviceId':data.environment.deviceId,
+				'token':localStorage.getItem('sessionId'),
+			},
+			data:data||[],
+			method:"post",
+		})
+	}
 }
