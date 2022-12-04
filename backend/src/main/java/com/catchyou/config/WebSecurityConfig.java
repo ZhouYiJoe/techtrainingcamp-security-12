@@ -1,9 +1,6 @@
 package com.catchyou.config;
 
-import com.catchyou.filter.AddressFilter;
-import com.catchyou.filter.ExceptionFilter;
-import com.catchyou.filter.RequestFrequencyFilter;
-import com.catchyou.filter.TokenFilter;
+import com.catchyou.filter.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

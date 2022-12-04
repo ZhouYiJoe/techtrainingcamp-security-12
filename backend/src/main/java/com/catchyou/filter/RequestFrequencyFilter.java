@@ -29,7 +29,7 @@ public class RequestFrequencyFilter extends OncePerRequestFilter {
         String ip = (String) request.getAttribute("ip");
         Boolean inCaptchaList = redisTemplate.opsForSet().isMember(RedisConstants.CAPTCHA_BLOCK_LIST_KEY, ip);
         Assert.notNull(inCaptchaList, "Redis数据获取异常");
-        if (inCaptchaList) {
+        if (inCaptchaList && !"/auth/checkMouseTrack".equals(request.getServletPath())) {
             HashMap<String, Object> map = new HashMap<>();
             map.put("decisionType", 1);
             MyUtil.setResponse(response, new CommonResult<>(-1, "需要进行滑块验证", map));
