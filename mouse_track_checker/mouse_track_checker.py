@@ -80,3 +80,7 @@ def check_similar(vec: np.ndarray, others: np.ndarray) -> bool:
     min_dis_sqr = np.min(dis_sqr)
     print('difference_to_history:', min_dis_sqr)
     return min_dis_sqr < THRESHOLD_SIMILAR
+
+
+if __name__ == '__main__':
+    app.run()
