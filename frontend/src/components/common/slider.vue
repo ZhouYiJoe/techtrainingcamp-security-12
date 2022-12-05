@@ -88,19 +88,6 @@ export default {
                 ele.style.transform = 'translateX(' + this.disX + 'px)';
                 e.preventDefault();
             };
-            document.onmousemove = (e) => {
-                let endX = e.clientX;
-                this.disX = endX - startX;
-                if (this.disX <= 0) {
-                    this.disX = 0;
-                }
-                if (this.disX >= MaxX - eleWidth) {//减去滑块的宽度,体验效果更好
-                    this.disX = MaxX;
-                }
-                ele.style.transition = '.1s all';
-                ele.style.transform = 'translateX(' + this.disX + 'px)';
-                e.preventDefault();
-            };
             document.onmouseup = () => {
                 if (this.disX !== MaxX) {
                     // 滑块未完成
